@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Number Mastermind - เกมทายตัวเลข</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.8);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background animation */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(245, 158, 11, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgAnimation 20s ease-in-out infinite;
+        }
+
+        @keyframes bgAnimation {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        /* Container styles */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card styles */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Typography */
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #6366f1 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        /* Menu page styles */
+        .logo {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 16px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .menu-description {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 1.1rem;
+        }
+
+        .difficulty-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .difficulty-card {
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .difficulty-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .difficulty-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .difficulty-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.3);
+        }
+
+        .difficulty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .difficulty-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Game page styles */
+        .game-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .encoded-display {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 24px;
+            gap: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .timer {
+            color: var(--warning-color) !important;
+        }
+
+        .timer.danger {
+            color: var(--danger-color) !important;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Input section */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .guess-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.75rem;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+            letter-spacing: 0.5em;
+            transition: all 0.3s ease;
+        }
+
+        .guess-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .guess-input::placeholder {
+            color: rgba(203, 213, 225, 0.5);
+            letter-spacing: normal;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5558e3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #dc8a04;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-primary);
+            width: 100%;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.3);
+        }
+
+        /* History section */
+        .history-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .history-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .guess-number {
+            font-size: 1.25rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.2em;
+        }
+
+        .feedback {
+            display: flex;
+            gap: 12px;
+        }
+
+        .hint {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .correct-digit {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .correct-position {
+            background: var(--success-color);
+            color: white;
+        }
+
+        /* Victory screen */
+        .victory-animation {
+            animation: victoryPulse 0.6s ease-out;
+        }
+
+        @keyframes victoryPulse {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .victory-emoji {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 16px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .victory-message {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #10b981 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .victory-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .victory-stat {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .victory-stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .victory-stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Scrollbar styling */
+        .history-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .history-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .history-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Responsive design */
+        @media (max-width: 640px) {
+            .card {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .guess-input {
+                font-size: 1.5rem;
+                padding: 14px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.95rem;
+            }
+
+            .history-container {
+                max-height: 240px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 16px;
+            }
+
+            .card {
+                padding: 20px;
+                border-radius: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Confetti styles */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Menu Page -->
+        <div id="menuPage" class="page active">
+            <div class="card">
+                <div class="logo">🎯</div>
+                <h1>Number Mastermind</h1>
+                <p class="menu-description">ท้าทายสมองกับเกมทายตัวเลขสุดคลาสสิก</p>
+                
+                <div class="difficulty-grid">
+                    <div class="difficulty-card" onclick="game.selectDifficulty('easy')">
+                        <div class="difficulty-title">🌟 ระดับง่าย</div>
+                        <div class="difficulty-description">ทายตัวเลข 3 หลัก เหมาะสำหรับผู้เริ่มต้น</div>
+                    </div>
+                    
+                    <div class="difficulty-card" onclick="game.selectDifficulty('medium')">
+                        <div class="difficulty-title">⚡ ระดับกลาง</div>
+                        <div class="difficulty-description">ทายตัวเลข 4 หลัก ท้าทายขึ้นอีกระดับ</div>
+                    </div>
+                    
+                    <div class="difficulty-card" onclick="game.selectDifficulty('hard')">
+                        <div class="difficulty-title">🔥 ระดับยาก</div>
+                        <div class="difficulty-description">ทายตัวเลข 5 หลัก + จำกัดเวลา 60 วินาที</div>
+                    </div>
+                    
+                    <div class="difficulty-card" onclick="game.selectDifficulty('expert')">
+                        <div class="difficulty-title">💎 ระดับมืออาชีพ</div>
+                        <div class="difficulty-description">ทายตัวเลข 4 หลัก แสดงเฉพาะตำแหน่งที่ถูก</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Page -->
+        <div id="gamePage" class="page">
+            <div class="card">
+                <div class="game-header">
+                    <h2 id="difficultyTitle">ระดับ</h2>
+                    <div class="encoded-display" id="encodedDisplay">รหัสลับ: </div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">จำนวนครั้ง</div>
+                        <div class="stat-value" id="attemptCount">0</div>
+                    </div>
+                    <div class="stat-item" id="timerContainer" style="display: none;">
+                        <div class="stat-label">เวลาคงเหลือ</div>
+                        <div class="stat-value timer" id="timer">60</div>
+                    </div>
+                </div>
+                
+                <div class="input-wrapper">
+                    <input type="text" id="guessInput" class="guess-input" 
+                           placeholder="กรอกตัวเลข" maxlength="5" autocomplete="off">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" id="submitBtn" onclick="game.makeGuess()">
+                        ส่งคำตอบ
+                    </button>
+                    <button class="btn btn-warning" id="revealBtn" onclick="game.revealAnswer()">
+                        เฉลย
+                    </button>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="game.backToMenu()">
+                    กลับเมนูหลัก
+                </button>
+                
+                <div class="history-container" style="margin-top: 24px;">
+                    <div class="history-title">ประวัติการทาย</div>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Victory Page -->
+        <div id="victoryPage" class="page">
+            <div class="card victory-animation">
+                <div class="victory-emoji">🎉</div>
+                <div class="victory-message">ยินดีด้วย! คุณทายถูกแล้ว!</div>
+                
+                <div class="victory-stats">
+                    <div class="victory-stat">
+                        <div class="victory-stat-value" id="totalGuesses">0</div>
+                        <div class="victory-stat-label">จำนวนครั้งที่ทาย</div>
+                    </div>
+                    <div class="victory-stat">
+                        <div class="victory-stat-value" id="timeSpent">0</div>
+                        <div class="victory-stat-label">เวลาที่ใช้ (วินาที)</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%;" onclick="game.playAgain()">
+                    เล่นอีกครั้ง
+                </button>
+                <button class="btn btn-secondary" style="margin-top: 12px;" onclick="game.backToMenu()">
+                    กลับเมนูหลัก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class NumberMastermind {
+            constructor() {
+                this.secretNumber = '';
+                this.encodedSecret = '';
+                this.difficulty = '';
+                this.guessHistory = [];
+                this.startTime = null;
+                this.timerInterval = null;
+                this.timeLimit = 0;
+                this.isGameActive = false;
+                this.attemptCount = 0;
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                const input = document.getElementById('guessInput');
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.makeGuess();
+                    }
+                });
+                
+                // Only allow numbers
+                input.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                });
+            }
+            
+            showPage(pageId) {
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                });
+                document.getElementById(pageId).classList.add('active');
+            }
+            
+            selectDifficulty(level) {
+                this.difficulty = level;
+                this.startNewGame();
+                this.showPage('gamePage');
+            }
+            
+            generateSecretNumber(digits) {
+                const availableDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                let secret = '';
+                
+                for (let i = 0; i < digits; i++) {
+                    const randomIndex = Math.floor(Math.random() * availableDigits.length);
+                    secret += availableDigits[randomIndex];
+                    availableDigits.splice(randomIndex, 1);
+                }
+                
+                return secret;
+            }
+            
+            encodeSecret(number) {
+                const salt = 'NM2024';
+                const combined = salt + number + salt;
+                return btoa(combined);
+            }
+            
+            startNewGame() {
+                let digits;
+                let difficultyTitle;
+                this.timeLimit = 0;
+                
+                switch(this.difficulty) {
+                    case 'easy':
+                        digits = 3;
+                        difficultyTitle = '🌟 ระดับง่าย (3 หลัก)';
+                        break;
+                    case 'medium':
+                        digits = 4;
+                        difficultyTitle = '⚡ ระดับกลาง (4 หลัก)';
+                        break;
+                    case 'hard':
+                        digits = 5;
+                        this.timeLimit = 60;
+                        difficultyTitle = '🔥 ระดับยาก (5 หลัก + จำกัดเวลา)';
+                        break;
+                    case 'expert':
+                        digits = 4;
+                        difficultyTitle = '💎 ระดับมืออาชีพ (4 หลัก)';
+                        break;
+                }
+                
+                this.secretNumber = this.generateSecretNumber(digits);
+                this.encodedSecret = this.encodeSecret(this.secretNumber);
+                this.guessHistory = [];
+                this.attemptCount = 0;
+                this.startTime = Date.now();
+                this.isGameActive = true;
+                
+                // Update UI
+                document.getElementById('difficultyTitle').textContent = difficultyTitle;
+                document.getElementById('encodedDisplay').textContent = `รหัสลับ: ${this.encodedSecret}`;
+                document.getElementById('attemptCount').textContent = '0';
+                document.getElementById('historyList').innerHTML = '';
+                document.getElementById('guessInput').value = '';
+                document.getElementById('guessInput').maxLength = digits;
+                document.getElementById('guessInput').placeholder = `กรอกตัวเลข ${digits} หลัก`;
+                
+                // Timer for hard mode
+                if (this.difficulty === 'hard') {
+                    document.getElementById('timerContainer').style.display = 'block';
+                    this.startTimer();
+                } else {
+                    document.getElementById('timerContainer').style.display = 'none';
+                }
+                
+                // Focus input
+                setTimeout(() => {
+                    document.getElementById('guessInput').focus();
+                }, 300);
+            }
+            
+            startTimer() {
+                let timeLeft = this.timeLimit;
+                const timerElement = document.getElementById('timer');
+                timerElement.textContent = timeLeft;
+                timerElement.classList.remove('danger');
+                
+                this.timerInterval = setInterval(() => {
+                    timeLeft--;
+                    timerElement.textContent = timeLeft;
+                    
+                    if (timeLeft <= 10) {
+                        timerElement.classList.add('danger');
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timerInterval);
+                        this.timeUp();
+                    }
+                }, 1000);
+            }
+            
+            timeUp() {
+                alert('⏰ หมดเวลา! ลองทายใหม่อีกครั้ง');
+                document.getElementById('guessInput').value = '';
+                if (this.difficulty === 'hard' && this.isGameActive) {
+                    this.startTimer();
+                }
+            }
+            
+            makeGuess() {
+                if (!this.isGameActive) return;
+                
+                const guess = document.getElementById('guessInput').value;
+                
+                // Validate input
+                if (guess.length !== this.secretNumber.length) {
+                    this.showError(`กรุณากรอกตัวเลข ${this.secretNumber.length} หลัก`);
+                    return;
+                }
+                
+                // Check for duplicate digits
+                const digits = guess.split('');
+                if (new Set(digits).size !== digits.length) {
+                    this.showError('ตัวเลขต้องไม่ซ้ำกัน');
+                    return;
+                }
+                
+                // Update attempt count
+                this.attemptCount++;
+                document.getElementById('attemptCount').textContent = this.attemptCount;
+                
+                // Calculate feedback
+                const feedback = this.calculateFeedback(guess);
+                
+                // Add to history
+                this.addToHistory(guess, feedback);
+                
+                // Check if won
+                if (feedback.correctPosition === this.secretNumber.length) {
+                    this.handleVictory();
+                } else {
+                    // Reset for next guess
+                    document.getElementById('guessInput').value = '';
+                    document.getElementById('guessInput').focus();
+                    
+                    // Reset timer for hard mode
+                    if (this.difficulty === 'hard') {
+                        clearInterval(this.timerInterval);
+                        this.startTimer();
+                    }
+                }
+            }
+            
+            calculateFeedback(guess) {
+                let correctPosition = 0;
+                let correctDigit = 0;
+                
+                const secretDigits = this.secretNumber.split('');
+                const guessDigits = guess.split('');
+                
+                // Check correct positions
+                for (let i = 0; i < secretDigits.length; i++) {
+                    if (secretDigits[i] === guessDigits[i]) {
+                        correctPosition++;
+                    }
+                }
+                
+                // Check correct digits (total count of matching digits)
+                for (let digit of guessDigits) {
+                    if (secretDigits.includes(digit)) {
+                        correctDigit++;
+                    }
+                }
+                
+                // For expert mode, only show correct positions
+                if (this.difficulty === 'expert') {
+                    return { correctPosition, correctDigit: null };
+                }
+                
+                return { correctPosition, correctDigit };
+            }
+            
+            addToHistory(guess, feedback) {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                let feedbackHTML = '';
+                if (this.difficulty === 'expert') {
+                    feedbackHTML = `
+                        <span class="hint correct-position">ตำแหน่งถูก: ${feedback.correctPosition}</span>
+                    `;
+                } else {
+                    feedbackHTML = `
+                        <span class="hint correct-digit">ตัวเลขถูก: ${feedback.correctDigit}</span>
+                        <span class="hint correct-position">ตำแหน่งถูก: ${feedback.correctPosition}</span>
+                    `;
+                }
+                
+                historyItem.innerHTML = `
+                    <span class="guess-number">${guess}</span>
+                    <div class="feedback">
+                        ${feedbackHTML}
+                    </div>
+                `;
+                
+                document.getElementById('historyList').insertBefore(historyItem, 
+                    document.getElementById('historyList').firstChild);
+                
+                this.guessHistory.push({ guess, feedback });
+            }
+            
+            showError(message) {
+                const input = document.getElementById('guessInput');
+                input.style.borderColor = 'var(--danger-color)';
+                input.placeholder = message;
+                
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                    input.placeholder = `กรอกตัวเลข ${this.secretNumber.length} หลัก`;
+                }, 2000);
+            }
+            
+            handleVictory() {
+                this.isGameActive = false;
+                clearInterval(this.timerInterval);
+                
+                const endTime = Date.now();
+                const timeSpent = Math.floor((endTime - this.startTime) / 1000);
+                
+                document.getElementById('totalGuesses').textContent = this.attemptCount;
+                document.getElementById('timeSpent').textContent = timeSpent;
+                
+                // Create confetti
+                this.createConfetti();
+                
+                // Show victory page after a short delay
+                setTimeout(() => {
+                    this.showPage('victoryPage');
+                }, 500);
+            }
+            
+            createConfetti() {
+                const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+                const confettiCount = 50;
+                
+                for (let i = 0; i < confettiCount; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 5000);
+                }
+            }
+            
+            revealAnswer() {
+                if (!this.isGameActive) return;
+                
+                const confirmReveal = confirm('คุณแน่ใจหรือไม่ที่จะดูเฉลย? การเปิดเฉลยจะจบเกมทันที');
+                
+                if (confirmReveal) {
+                    this.isGameActive = false;
+                    clearInterval(this.timerInterval);
+                    
+                    alert(`เฉลย: ${this.secretNumber}\n\nรหัสลับที่เข้ารหัส: ${this.encodedSecret}`);
+                    document.getElementById('guessInput').value = this.secretNumber;
+                }
+            }
+            
+            playAgain() {
+                this.startNewGame();
+                this.showPage('gamePage');
+            }
+            
+            backToMenu() {
+                this.isGameActive = false;
+                clearInterval(this.timerInterval);
+                this.showPage('menuPage');
+            }
+        }
+        
+        // Initialize game
+        const game = new NumberMastermind();
+    </script>
+</body>
+</html>
